@@ -104,10 +104,10 @@ const Contact = sequelize.define(
         fields: ['subject'],
       },
       {
-        fields: ['createdAt'],
+        fields: ['created_at'],
       },
       {
-        fields: ['isRead'],
+        fields: ['is_read'],
       },
     ],
   }

@@ -16,13 +16,19 @@ async function createTables() {
     const sqlFilePath = path.join(__dirname, '..', 'create_tables.sql');
     const sqlContent = fs.readFileSync(sqlFilePath, 'utf8');
 
-    console.log('🔄 Creating tables...');
+    console.log('🔄 Preparing SQL statements...');
+
+    // Remove SQL comments and split by semicolon
+    const cleanedSQL = sqlContent
+      .split('\n')
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n');
 
     // Split SQL content by semicolon and execute each statement
-    const statements = sqlContent
+    const statements = cleanedSQL
       .split(';')
       .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
+      .filter(stmt => stmt.length > 0);
 
     // Separate statements into categories
     const extensionStatements = statements.filter(stmt =>
@@ -38,6 +44,12 @@ async function createTables() {
     const commentStatements = statements.filter(stmt =>
       stmt.toUpperCase().includes('COMMENT ON')
     );
+
+    console.log(`📋 Found ${statements.length} total statements`);
+    console.log(`   - ${extensionStatements.length} extensions`);
+    console.log(`   - ${tableStatements.length} tables`);
+    console.log(`   - ${indexStatements.length} indexes`);
+    console.log(`   - ${commentStatements.length} comments`);
 
     // Execute in order: extensions -> tables -> indexes -> comments
     console.log('📦 Creating extensions...');

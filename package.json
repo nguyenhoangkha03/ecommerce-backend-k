@@ -15,6 +15,7 @@
     "db:seed": "sequelize-cli db:seed:all",
     "db:reset": "sequelize-cli db:drop && sequelize-cli db:create && sequelize-cli db:migrate && sequelize-cli db:seed:all",
     "db:create-tables": "node scripts/create-tables.js",
+    "db:create-simple": "node scripts/create-tables-simple.js",
     "db:reset-all": "node scripts/reset-database.js",
     "import:sample": "node import-sample-data.js",
     "import:json": "node import-json-data.js"
