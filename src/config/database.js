@@ -39,12 +39,12 @@ module.exports = {
       timestamps: true,
       underscored: true,
     },
-    dialectOptions: {
+    dialectOptions: process.env.DB_SSL === 'true' ? {
       ssl: {
         require: true,
         rejectUnauthorized: false,
       },
-    },
+    } : {},
     pool: {
       max: 5,
       min: 0,
