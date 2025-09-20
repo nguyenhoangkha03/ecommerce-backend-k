@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Quản lý Liên hệ</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #333; 
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .contact-item { 
+            border: 1px solid #ddd; 
+            margin: 15px 0; 
+            padding: 15px; 
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .contact-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .contact-name { 
+            font-weight: bold; 
+            color: #2563eb;
+            font-size: 18px;
+        }
+        .contact-date { 
+            color: #666; 
+            font-size: 14px;
+        }
+        .contact-email { 
+            color: #059669; 
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        .contact-subject { 
+            background: #3b82f6; 
+            color: white; 
+            padding: 4px 8px; 
+            border-radius: 12px; 
+            font-size: 12px;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .contact-message { 
+            margin-top: 10px; 
+            padding: 10px;
+            background: white;
+            border-left: 4px solid #3b82f6;
+            border-radius: 4px;
+        }
+        .status { 
+            padding: 4px 8px; 
+            border-radius: 12px; 
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-pending { background: #fbbf24; color: white; }
+        .status-resolved { background: #10b981; color: white; }
+        .loading { 
+            text-align: center; 
+            padding: 50px;
+            color: #666;
+        }
+        .error { 
+            color: #dc2626; 
+            text-align: center; 
+            padding: 20px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 4px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 8px;
+            min-width: 100px;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛎️ Quản lý Liên hệ</h1>
+        
+        <div class="stats" id="stats">
+            <div class="stat-item">
+                <div class="stat-number" id="totalContacts">-</div>
+                <div class="stat-label">Tổng tin nhắn</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="pendingContacts">-</div>
+                <div class="stat-label">Chờ xử lý</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="todayContacts">-</div>
+                <div class="stat-label">Hôm nay</div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">Đang tải dữ liệu...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="contacts"></div>
+    </div>
+
+    <script>
+        async function loadContacts() {
+            try {
+                const response = await fetch('/api/admin/contacts');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayContacts(data.data.contacts);
+                    updateStats(data.data.contacts);
+                } else {
+                    showError('Không thể tải dữ liệu: ' + data.message);
+                }
+            } catch (error) {
+                showError('Lỗi kết nối: ' + error.message);
+            }
+        }
+
+        function displayContacts(contacts) {
+            const container = document.getElementById('contacts');
+            const loading = document.getElementById('loading');
+            
+            loading.style.display = 'none';
+            
+            if (contacts.length === 0) {
+                container.innerHTML = '<div class="loading">Chưa có tin nhắn liên hệ nào.</div>';
+                return;
+            }
+
+            container.innerHTML = contacts.map(contact => `
+                <div class="contact-item">
+                    <div class="contact-header">
+                        <div class="contact-name">${contact.name}</div>
+                        <div class="contact-date">${new Date(contact.createdAt).toLocaleString('vi-VN')}</div>
+                    </div>
+                    <div class="contact-email">📧 ${contact.email}</div>
+                    <div>
+                        <span class="contact-subject">${getSubjectText(contact.subject)}</span>
+                        <span class="status status-${contact.status}">${getStatusText(contact.status)}</span>
+                    </div>
+                    <div class="contact-message">${contact.message}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats(contacts) {
+            const total = contacts.length;
+            const pending = contacts.filter(c => c.status === 'pending').length;
+            const today = contacts.filter(c => {
+                const contactDate = new Date(c.createdAt).toDateString();
+                const todayDate = new Date().toDateString();
+                return contactDate === todayDate;
+            }).length;
+
+            document.getElementById('totalContacts').textContent = total;
+            document.getElementById('pendingContacts').textContent = pending;
+            document.getElementById('todayContacts').textContent = today;
+        }
+
+        function getSubjectText(subject) {
+            const subjects = {
+                'general': 'Tổng quát',
+                'support': 'Hỗ trợ',
+                'feedback': 'Phản hồi',
+                'partnership': 'Hợp tác'
+            };
+            return subjects[subject] || subject;
+        }
+
+        function getStatusText(status) {
+            const statuses = {
+                'pending': 'Chờ xử lý',
+                'in_progress': 'Đang xử lý',
+                'resolved': 'Đã giải quyết',
+                'closed': 'Đã đóng'
+            };
+            return statuses[status] || status;
+        }
+
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        // Load contacts when page loads
+        loadContacts();
+
+        // Auto refresh every 30 seconds
+        setInterval(loadContacts, 30000);
+    </script>
+</body>
+</html>
