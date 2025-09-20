@@ -24,19 +24,71 @@ async function createTables() {
       .map(stmt => stmt.trim())
       .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
 
-    for (const statement of statements) {
-      if (statement.trim()) {
-        try {
-          await sequelize.query(statement);
-        } catch (error) {
-          // Log warning for non-critical errors (like extension already exists)
-          if (error.message.includes('already exists')) {
-            console.log(`⚠️  ${error.message}`);
-          } else {
-            console.error(`❌ Error executing statement: ${statement.substring(0, 100)}...`);
-            console.error(`   Error: ${error.message}`);
-          }
+    // Separate statements into categories
+    const extensionStatements = statements.filter(stmt =>
+      stmt.toUpperCase().includes('CREATE EXTENSION')
+    );
+    const tableStatements = statements.filter(stmt =>
+      stmt.toUpperCase().includes('CREATE TABLE')
+    );
+    const indexStatements = statements.filter(stmt =>
+      stmt.toUpperCase().includes('CREATE INDEX') ||
+      stmt.toUpperCase().includes('CREATE UNIQUE INDEX')
+    );
+    const commentStatements = statements.filter(stmt =>
+      stmt.toUpperCase().includes('COMMENT ON')
+    );
+
+    // Execute in order: extensions -> tables -> indexes -> comments
+    console.log('📦 Creating extensions...');
+    for (const statement of extensionStatements) {
+      try {
+        await sequelize.query(statement);
+      } catch (error) {
+        if (error.message.includes('already exists')) {
+          console.log(`⚠️  Extension already exists`);
+        } else {
+          console.error(`❌ Error: ${error.message}`);
         }
+      }
+    }
+
+    console.log('📊 Creating tables...');
+    let tablesCreated = 0;
+    for (const statement of tableStatements) {
+      try {
+        await sequelize.query(statement);
+        tablesCreated++;
+      } catch (error) {
+        if (error.message.includes('already exists')) {
+          console.log(`⚠️  Table already exists`);
+        } else {
+          console.error(`❌ Error creating table: ${error.message}`);
+        }
+      }
+    }
+    console.log(`✅ ${tablesCreated}/${tableStatements.length} tables created`);
+
+    console.log('🔗 Creating indexes...');
+    let indexesCreated = 0;
+    for (const statement of indexStatements) {
+      try {
+        await sequelize.query(statement);
+        indexesCreated++;
+      } catch (error) {
+        if (!error.message.includes('already exists')) {
+          // Silently skip index errors as tables might not exist yet
+        }
+      }
+    }
+    console.log(`✅ ${indexesCreated}/${indexStatements.length} indexes created`);
+
+    console.log('💬 Adding comments...');
+    for (const statement of commentStatements) {
+      try {
+        await sequelize.query(statement);
+      } catch (error) {
+        // Silently skip comment errors
       }
     }
 
